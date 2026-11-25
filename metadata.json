@@ -1,0 +1,6 @@
+{
+  "name": "Aula Virtual",
+  "description": "Campus y Aula Virtual universitaria con gestión de cursos, tareas, calificaciones, horarios, foros, asistencia, estado de cuenta y carnet digital conectados en tiempo real con Firebase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

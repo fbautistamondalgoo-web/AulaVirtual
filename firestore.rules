@@ -1,0 +1,415 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny all by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Shared Security Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // --- Entity Validation Helpers ---
+    function isValidStudentProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 100 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+             data.studentCode is string && data.studentCode.size() >= 3 && data.studentCode.size() <= 30 &&
+             data.faculty is string && data.faculty.size() >= 1 && data.faculty.size() <= 100 &&
+             data.career is string && data.career.size() >= 1 && data.career.size() <= 100 &&
+             data.cycle is string && data.cycle.size() >= 1 && data.cycle.size() <= 30 &&
+             data.campus is string && data.campus.size() >= 1 && data.campus.size() <= 60 &&
+             data.modality in ['Presencial', 'Semipresencial', 'Virtual'] &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             data.seeded is bool;
+    }
+
+    function isValidCourse(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.code is string && data.code.size() >= 2 && data.code.size() <= 20 &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 120 &&
+             data.professor is string && data.professor.size() >= 2 && data.professor.size() <= 100 &&
+             data.credits is int && data.credits >= 1 && data.credits <= 10 &&
+             data.section is string && data.section.size() >= 1 && data.section.size() <= 20 &&
+             data.modality in ['Presencial', 'Remoto', 'Híbrido'] &&
+             data.classroom is string && data.classroom.size() >= 1 && data.classroom.size() <= 80 &&
+             data.scheduleSummary is string && data.scheduleSummary.size() >= 1 && data.scheduleSummary.size() <= 100 &&
+             data.dayOfWeek is int && data.dayOfWeek >= 1 && data.dayOfWeek <= 7 &&
+             data.startHour is int && data.startHour >= 0 && data.startHour <= 23 &&
+             data.startMinute is int && data.startMinute >= 0 && data.startMinute <= 59 &&
+             data.durationMinutes is int && data.durationMinutes >= 30 && data.durationMinutes <= 360 &&
+             data.colorHex is string && data.colorHex.size() >= 4 && data.colorHex.size() <= 12 &&
+             data.syllabusSummary is string && data.syllabusSummary.size() <= 500 &&
+             data.progressPercent is int && data.progressPercent >= 0 && data.progressPercent <= 100 &&
+             data.gradeEc1 is number && data.gradeEc1 >= 0 && data.gradeEc1 <= 20 &&
+             data.gradeEp is number && data.gradeEp >= 0 && data.gradeEp <= 20 &&
+             data.gradeEc2 is number && data.gradeEc2 >= 0 && data.gradeEc2 <= 20 &&
+             data.gradeEf is number && data.gradeEf >= 0 && data.gradeEf <= 20 &&
+             data.attendancePresent is int && data.attendancePresent >= 0 && data.attendancePresent <= 200 &&
+             data.attendanceTotal is int && data.attendanceTotal >= 0 && data.attendanceTotal <= 200;
+    }
+
+    function isValidCourseModule(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             isValidId(data.courseId) &&
+             data.weekNumber is int && data.weekNumber >= 1 && data.weekNumber <= 20 &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 140 &&
+             data.description is string && data.description.size() <= 500 &&
+             data.resourceLabel is string && data.resourceLabel.size() <= 100 &&
+             data.resourceType in ['PDF', 'Video', 'Lectura', 'Enlace'] &&
+             data.completed is bool;
+    }
+
+    function isValidCourseTask(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             isValidId(data.courseId) &&
+             data.courseCode is string && data.courseCode.size() >= 1 && data.courseCode.size() <= 20 &&
+             data.courseName is string && data.courseName.size() >= 1 && data.courseName.size() <= 120 &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 140 &&
+             data.description is string && data.description.size() <= 600 &&
+             data.taskType in ['Tarea', 'Examen', 'Foro', 'Proyecto'] &&
+             data.dueLabel is string && data.dueLabel.size() >= 1 && data.dueLabel.size() <= 60 &&
+             data.dueEpochMs is int && data.dueEpochMs >= 0 &&
+             data.status in ['Pendiente', 'Entregado', 'Calificado'] &&
+             (!('submissionNote' in data) || (data.submissionNote is string && data.submissionNote.size() <= 600)) &&
+             (!('attachmentName' in data) || (data.attachmentName is string && data.attachmentName.size() <= 120)) &&
+             (!('score' in data) || (data.score is number && data.score >= 0 && data.score <= 20)) &&
+             data.maxScore is number && data.maxScore >= 1 && data.maxScore <= 100;
+    }
+
+    function isValidForumPost(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             isValidId(data.courseId) &&
+             data.courseName is string && data.courseName.size() >= 1 && data.courseName.size() <= 120 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 100 &&
+             data.authorRole in ['Docente', 'Estudiante'] &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 140 &&
+             data.content is string && data.content.size() >= 2 && data.content.size() <= 1000 &&
+             data.pinned is bool &&
+             data.likesCount is int && data.likesCount >= 0 && data.likesCount <= 10000 &&
+             data.repliesCount is int && data.repliesCount >= 0 && data.repliesCount <= 1000;
+    }
+
+    function isValidAttendanceLog(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             isValidId(data.courseId) &&
+             data.sessionTitle is string && data.sessionTitle.size() >= 2 && data.sessionTitle.size() <= 120 &&
+             data.dateLabel is string && data.dateLabel.size() >= 2 && data.dateLabel.size() <= 40 &&
+             data.status in ['Presente', 'Tardanza', 'Falta'];
+    }
+
+    function isValidTuitionPayment(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.concept is string && data.concept.size() >= 2 && data.concept.size() <= 120 &&
+             data.period is string && data.period.size() >= 2 && data.period.size() <= 30 &&
+             data.dueDateLabel is string && data.dueDateLabel.size() >= 2 && data.dueDateLabel.size() <= 40 &&
+             data.amountSoles is number && data.amountSoles >= 0 && data.amountSoles <= 50000 &&
+             data.status in ['Pagado', 'Pendiente', 'Vencido'] &&
+             (!('receiptCode' in data) || (data.receiptCode is string && data.receiptCode.size() <= 60));
+    }
+
+    function isValidSpaceReservation(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.spaceName is string && data.spaceName.size() >= 2 && data.spaceName.size() <= 120 &&
+             data.location is string && data.location.size() >= 2 && data.location.size() <= 120 &&
+             data.dateLabel is string && data.dateLabel.size() >= 2 && data.dateLabel.size() <= 40 &&
+             data.timeSlot is string && data.timeSlot.size() >= 2 && data.timeSlot.size() <= 50 &&
+             data.status in ['Confirmada', 'Cancelada'];
+    }
+
+    function isValidCampusMessage(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.recipient is string && data.recipient.size() >= 2 && data.recipient.size() <= 100 &&
+             data.category in ['Docente', 'Trámite', 'Soporte'] &&
+             data.subject is string && data.subject.size() >= 2 && data.subject.size() <= 140 &&
+             data.body is string && data.body.size() >= 2 && data.body.size() <= 1000 &&
+             data.status in ['Enviado', 'Respondido'] &&
+             (!('replyText' in data) || (data.replyText is string && data.replyText.size() <= 1000));
+    }
+
+    // --- Collection Rules ---
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == userId &&
+                       incoming().keys().hasAll(['userId', 'fullName', 'studentCode', 'faculty', 'career', 'cycle', 'campus', 'modality', 'seeded', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'fullName', 'email', 'studentCode', 'faculty', 'career', 'cycle', 'campus', 'modality', 'phone', 'photoUrl', 'seeded', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidStudentProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidStudentProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().studentCode == existing().studentCode &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'email', 'faculty', 'career', 'cycle', 'campus', 'modality', 'phone', 'photoUrl', 'seeded', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /courses/{courseId} {
+        allow get: if isOwner(userId) && isValidId(courseId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(courseId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll([
+                           'userId', 'code', 'name', 'professor', 'credits', 'section', 'modality',
+                           'classroom', 'scheduleSummary', 'dayOfWeek', 'startHour', 'startMinute',
+                           'durationMinutes', 'colorHex', 'syllabusSummary', 'progressPercent',
+                           'gradeEc1', 'gradeEp', 'gradeEc2', 'gradeEf', 'attendancePresent',
+                           'attendanceTotal', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'code', 'name', 'professor', 'credits', 'section', 'modality',
+                           'classroom', 'scheduleSummary', 'dayOfWeek', 'startHour', 'startMinute',
+                           'durationMinutes', 'colorHex', 'syllabusSummary', 'progressPercent',
+                           'gradeEc1', 'gradeEp', 'gradeEc2', 'gradeEf', 'attendancePresent',
+                           'attendanceTotal', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidCourse(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(courseId) &&
+                         isValidCourse(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().code == existing().code &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'professor', 'credits', 'section', 'modality', 'classroom',
+                           'scheduleSummary', 'dayOfWeek', 'startHour', 'startMinute',
+                           'durationMinutes', 'colorHex', 'syllabusSummary', 'progressPercent',
+                           'gradeEc1', 'gradeEp', 'gradeEc2', 'gradeEf', 'attendancePresent',
+                           'attendanceTotal', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(courseId);
+      }
+
+      match /modules/{moduleId} {
+        allow get: if isOwner(userId) && isValidId(moduleId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(moduleId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'courseId', 'weekNumber', 'title', 'description', 'resourceLabel', 'resourceType', 'completed', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'courseId', 'weekNumber', 'title', 'description', 'resourceLabel', 'resourceType', 'completed', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidCourseModule(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(moduleId) &&
+                         isValidCourseModule(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().courseId == existing().courseId &&
+                         incoming().weekNumber == existing().weekNumber &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'resourceLabel', 'resourceType', 'completed', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(moduleId);
+      }
+
+      match /tasks/{taskId} {
+        allow get: if isOwner(userId) && isValidId(taskId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(taskId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'courseId', 'courseCode', 'courseName', 'title', 'description', 'taskType', 'dueLabel', 'dueEpochMs', 'status', 'maxScore', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'courseId', 'courseCode', 'courseName', 'title', 'description', 'taskType', 'dueLabel', 'dueEpochMs', 'status', 'submissionNote', 'attachmentName', 'score', 'maxScore', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidCourseTask(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(taskId) &&
+                         isValidCourseTask(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().courseId == existing().courseId &&
+                         incoming().courseCode == existing().courseCode &&
+                         incoming().courseName == existing().courseName &&
+                         incoming().taskType == existing().taskType &&
+                         incoming().maxScore == existing().maxScore &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'dueLabel', 'dueEpochMs', 'status', 'submissionNote', 'attachmentName', 'score', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(taskId);
+      }
+
+      match /forum_posts/{postId} {
+        allow get: if isOwner(userId) && isValidId(postId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(postId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'courseId', 'courseName', 'authorName', 'authorRole', 'title', 'content', 'pinned', 'likesCount', 'repliesCount', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'courseId', 'courseName', 'authorName', 'authorRole', 'title', 'content', 'pinned', 'likesCount', 'repliesCount', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidForumPost(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(postId) &&
+                         isValidForumPost(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().courseId == existing().courseId &&
+                         incoming().courseName == existing().courseName &&
+                         incoming().authorName == existing().authorName &&
+                         incoming().authorRole == existing().authorRole &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'pinned', 'likesCount', 'repliesCount', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(postId);
+      }
+
+      match /attendance_logs/{logId} {
+        allow get: if isOwner(userId) && isValidId(logId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(logId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'courseId', 'sessionTitle', 'dateLabel', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'courseId', 'sessionTitle', 'dateLabel', 'status', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidAttendanceLog(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(logId) &&
+                         isValidAttendanceLog(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().courseId == existing().courseId &&
+                         incoming().sessionTitle == existing().sessionTitle &&
+                         incoming().dateLabel == existing().dateLabel &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+
+      match /payments/{paymentId} {
+        allow get: if isOwner(userId) && isValidId(paymentId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(paymentId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'concept', 'period', 'dueDateLabel', 'amountSoles', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'concept', 'period', 'dueDateLabel', 'amountSoles', 'status', 'receiptCode', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidTuitionPayment(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(paymentId) &&
+                         isValidTuitionPayment(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().concept == existing().concept &&
+                         incoming().period == existing().period &&
+                         incoming().dueDateLabel == existing().dueDateLabel &&
+                         incoming().amountSoles == existing().amountSoles &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'receiptCode', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(paymentId);
+      }
+
+      match /reservations/{reservationId} {
+        allow get: if isOwner(userId) && isValidId(reservationId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(reservationId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'spaceName', 'location', 'dateLabel', 'timeSlot', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'spaceName', 'location', 'dateLabel', 'timeSlot', 'status', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidSpaceReservation(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(reservationId) &&
+                         isValidSpaceReservation(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().spaceName == existing().spaceName &&
+                         incoming().location == existing().location &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['dateLabel', 'timeSlot', 'status', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(reservationId);
+      }
+
+      match /messages/{messageId} {
+        allow get: if isOwner(userId) && isValidId(messageId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(messageId) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'recipient', 'category', 'subject', 'body', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'recipient', 'category', 'subject', 'body', 'status', 'replyText', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidCampusMessage(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(messageId) &&
+                         isValidCampusMessage(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().recipient == existing().recipient &&
+                         incoming().category == existing().category &&
+                         incoming().subject == existing().subject &&
+                         incoming().body == existing().body &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'replyText', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(messageId);
+      }
+    }
+  }
+}

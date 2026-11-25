@@ -1,0 +1,229 @@
+{
+  "entities": {
+    "StudentProfile": {
+      "title": "StudentProfile",
+      "description": "Authenticated student profile and academic summary in the virtual campus.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the student." },
+        "fullName": { "type": "string", "description": "Student full display name." },
+        "email": { "type": "string", "description": "Optional institutional or Google email." },
+        "studentCode": { "type": "string", "description": "University student code (e.g. U202614820)." },
+        "faculty": { "type": "string", "description": "Academic faculty name." },
+        "career": { "type": "string", "description": "Academic career / program." },
+        "cycle": { "type": "string", "description": "Current academic cycle (e.g. 2026-II · VI Ciclo)." },
+        "campus": { "type": "string", "description": "University campus location." },
+        "modality": { "type": "string", "enum": ["Presencial", "Semipresencial", "Virtual"] },
+        "phone": { "type": "string", "description": "Optional student contact phone." },
+        "photoUrl": { "type": "string", "description": "Optional student photo URL." },
+        "seeded": { "type": "boolean", "description": "Whether initial academic term data was seeded." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["userId", "fullName", "studentCode", "faculty", "career", "cycle", "campus", "modality", "seeded", "createdAt", "updatedAt"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Enrolled university course with schedule, grades, and attendance summary.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "professor": { "type": "string" },
+        "credits": { "type": "integer" },
+        "section": { "type": "string" },
+        "modality": { "type": "string", "enum": ["Presencial", "Remoto", "Híbrido"] },
+        "classroom": { "type": "string" },
+        "scheduleSummary": { "type": "string" },
+        "dayOfWeek": { "type": "integer" },
+        "startHour": { "type": "integer" },
+        "startMinute": { "type": "integer" },
+        "durationMinutes": { "type": "integer" },
+        "colorHex": { "type": "string" },
+        "syllabusSummary": { "type": "string" },
+        "progressPercent": { "type": "integer" },
+        "gradeEc1": { "type": "number" },
+        "gradeEp": { "type": "number" },
+        "gradeEc2": { "type": "number" },
+        "gradeEf": { "type": "number" },
+        "attendancePresent": { "type": "integer" },
+        "attendanceTotal": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "code", "name", "professor", "credits", "section", "modality",
+        "classroom", "scheduleSummary", "dayOfWeek", "startHour", "startMinute",
+        "durationMinutes", "colorHex", "syllabusSummary", "progressPercent",
+        "gradeEc1", "gradeEp", "gradeEc2", "gradeEf", "attendancePresent",
+        "attendanceTotal", "createdAt", "updatedAt"
+      ]
+    },
+    "CourseModule": {
+      "title": "CourseModule",
+      "description": "Weekly syllabus module or learning session inside a course.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "weekNumber": { "type": "integer" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "resourceLabel": { "type": "string" },
+        "resourceType": { "type": "string", "enum": ["PDF", "Video", "Lectura", "Enlace"] },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "courseId", "weekNumber", "title", "description", "resourceLabel", "resourceType", "completed", "createdAt", "updatedAt"]
+    },
+    "CourseTask": {
+      "title": "CourseTask",
+      "description": "Course assignment, exam, or academic deliverable.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "courseCode": { "type": "string" },
+        "courseName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "taskType": { "type": "string", "enum": ["Tarea", "Examen", "Foro", "Proyecto"] },
+        "dueLabel": { "type": "string" },
+        "dueEpochMs": { "type": "integer" },
+        "status": { "type": "string", "enum": ["Pendiente", "Entregado", "Calificado"] },
+        "submissionNote": { "type": "string" },
+        "attachmentName": { "type": "string" },
+        "score": { "type": "number" },
+        "maxScore": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "courseId", "courseCode", "courseName", "title", "description", "taskType", "dueLabel", "dueEpochMs", "status", "maxScore", "createdAt", "updatedAt"]
+    },
+    "ForumPost": {
+      "title": "ForumPost",
+      "description": "Course announcement or student discussion thread.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "courseName": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorRole": { "type": "string", "enum": ["Docente", "Estudiante"] },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "pinned": { "type": "boolean" },
+        "likesCount": { "type": "integer" },
+        "repliesCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "courseId", "courseName", "authorName", "authorRole", "title", "content", "pinned", "likesCount", "repliesCount", "createdAt", "updatedAt"]
+    },
+    "AttendanceLog": {
+      "title": "AttendanceLog",
+      "description": "Session attendance record for a course.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "sessionTitle": { "type": "string" },
+        "dateLabel": { "type": "string" },
+        "status": { "type": "string", "enum": ["Presente", "Tardanza", "Falta"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "courseId", "sessionTitle", "dateLabel", "status", "createdAt", "updatedAt"]
+    },
+    "TuitionPayment": {
+      "title": "TuitionPayment",
+      "description": "Tuition fee or academic installment record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "concept": { "type": "string" },
+        "period": { "type": "string" },
+        "dueDateLabel": { "type": "string" },
+        "amountSoles": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pagado", "Pendiente", "Vencido"] },
+        "receiptCode": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "concept", "period", "dueDateLabel", "amountSoles", "status", "createdAt", "updatedAt"]
+    },
+    "SpaceReservation": {
+      "title": "SpaceReservation",
+      "description": "Campus room, study cubicle, or lab reservation.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "spaceName": { "type": "string" },
+        "location": { "type": "string" },
+        "dateLabel": { "type": "string" },
+        "timeSlot": { "type": "string" },
+        "status": { "type": "string", "enum": ["Confirmada", "Cancelada"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "spaceName", "location", "dateLabel", "timeSlot", "status", "createdAt", "updatedAt"]
+    },
+    "CampusMessage": {
+      "title": "CampusMessage",
+      "description": "Direct academic message or support ticket.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "recipient": { "type": "string" },
+        "category": { "type": "string", "enum": ["Docente", "Trámite", "Soporte"] },
+        "subject": { "type": "string" },
+        "body": { "type": "string" },
+        "status": { "type": "string", "enum": ["Enviado", "Respondido"] },
+        "replyText": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "recipient", "category", "subject", "body", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/StudentProfile" },
+      "description": "Student profile document."
+    },
+    "/users/{userId}/courses/{courseId}": {
+      "schema": { "$ref": "#/entities/Course" },
+      "description": "Student enrolled courses."
+    },
+    "/users/{userId}/modules/{moduleId}": {
+      "schema": { "$ref": "#/entities/CourseModule" },
+      "description": "Course syllabus modules."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/CourseTask" },
+      "description": "Course tasks, exams, and submissions."
+    },
+    "/users/{userId}/forum_posts/{postId}": {
+      "schema": { "$ref": "#/entities/ForumPost" },
+      "description": "Course announcements and forum threads."
+    },
+    "/users/{userId}/attendance_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AttendanceLog" },
+      "description": "Course session attendance records."
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/TuitionPayment" },
+      "description": "Student tuition and fee schedule."
+    },
+    "/users/{userId}/reservations/{reservationId}": {
+      "schema": { "$ref": "#/entities/SpaceReservation" },
+      "description": "Campus room and lab reservations."
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/CampusMessage" },
+      "description": "Student inbox and campus support tickets."
+    }
+  }
+}
