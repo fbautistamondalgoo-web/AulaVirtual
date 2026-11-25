@@ -4,7 +4,7 @@ name: Generar APK AulaVirtual
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -20,19 +20,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Configurar Gradle
+      - name: Configurar Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '9.3.1'
+
+      - name: Verificar Gradle
+        run: gradle --version
 
       - name: Compilar APK
-        run: |
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug
-          else
-            gradle assembleDebug
-          fi
+        run: gradle assembleDebug --stacktrace
 
       - name: Publicar APK descargable
         uses: actions/upload-artifact@v4
@@ -40,3 +37,4 @@ jobs:
           name: AulaVirtual-APK
           path: '**/build/outputs/apk/debug/*.apk'
           if-no-files-found: error
+
